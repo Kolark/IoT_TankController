@@ -1,0 +1,145 @@
+#include <WiFi.h>
+#include <ArduinoWebsockets.h>
+#include <ArduinoJson.h>
+
+using namespace websockets;
+
+WebsocketsClient wsClient;
+bool wsConnected = false;
+const char* ssid = "UPBWiFi";
+const char* password = "";
+const char* websockets_server_host = "ec2-98-91-209-237.compute-1.amazonaws.com";
+const uint16_t websockets_server_port = 5001;
+
+void connectWiFi() {
+    Serial.printf("[WiFi] Connecting to %s\n", ssid);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+
+    const uint32_t start = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - start < 30000) {
+        Serial.print('.');
+        delay(500);
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println();
+        Serial.printf("[WiFi] Connected. IP=%s RSSI=%d dBm\n",
+                      WiFi.localIP().toString().c_str(), WiFi.RSSI());
+        return;
+    }
+
+    Serial.println("\n[WiFi] Failed to connect. Restarting...");
+    delay(3000);
+    ESP.restart();
+}
+
+void handleWebsocketEvent(WebsocketsEvent event, String data) {
+    switch (event) {
+        case WebsocketsEvent::ConnectionOpened:
+            Serial.println("[WS] Event: connection opened");
+            wsConnected = true;
+            break;
+        case WebsocketsEvent::ConnectionClosed:
+            Serial.println("[WS] Event: connection closed");
+            wsConnected = false;
+            break;
+        case WebsocketsEvent::GotPing:
+            Serial.println("[WS] Event: ping");
+            break;
+        case WebsocketsEvent::GotPong:
+            Serial.println("[WS] Event: pong");
+            break;
+        default:
+            if (data.length() > 0) {
+                Serial.printf("[WS] Event %d data: %s\n",
+                              static_cast<int>(event), data.c_str());
+            }
+            break;
+    }
+}
+
+void handleWebsocketMessage(WebsocketsMessage message) {
+    if (message.isText()) {
+        const String &payload = message.data();
+        Serial.printf("[WS] <<< %s\n", payload.c_str());
+        
+        DynamicJsonDocument doc(1024);
+        DeserializationError error = deserializeJson(doc, payload);
+        
+        if (!error) {
+            String msgType = doc["type"];
+            String msgData = doc["data"];
+            
+            if (msgType == "notification") {
+                Serial.printf("[NOTIFICATION] %s\n", msgData.c_str());
+            } else if (msgType == "response") {
+                Serial.printf("[RESPONSE] %s\n", msgData.c_str());
+            }
+        }
+    }
+}
+
+void sendMessage(const char* msg) {
+    if (wsConnected) {
+        DynamicJsonDocument doc(1024);
+        doc["type"] = "message";
+        doc["data"] = msg;
+        
+        String payload;
+        serializeJson(doc, payload);
+        
+        wsClient.send(payload);
+        Serial.printf("[WS] >>> %s\n", payload.c_str());
+    }
+}
+
+void beginWebSocket() {
+    if (wsClient.available()) {
+        wsClient.close();
+    }
+
+    String uri = String("ws://") + websockets_server_host + ":" + websockets_server_port;
+    Serial.printf("[WS] Connecting to %s\n", uri.c_str());
+
+    wsClient.onEvent(handleWebsocketEvent);
+    wsClient.onMessage(handleWebsocketMessage);
+
+    if (!wsClient.connect(uri)) {
+        Serial.println("[WS] Connection attempt failed");
+        wsConnected = false;
+        return;
+    }
+}
+
+void setup()
+{
+    Serial.begin(115200);
+    connectWiFi();
+    beginWebSocket();
+}
+
+void loop()
+{
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("[WiFi] Lost connection, attempting reconnect...");
+        wsConnected = false;
+        if (wsClient.available()) {
+            wsClient.close();
+        }
+        connectWiFi();
+        beginWebSocket();
+        delay(500);
+        return;
+    }
+
+    wsClient.poll();
+    
+    static unsigned long lastSend = 0;
+    if (wsConnected && millis() - lastSend > 10000) {
+        sendMessage("Hello from LilyGO");
+        lastSend = millis();
+    }
+    
+    delay(5);
+}

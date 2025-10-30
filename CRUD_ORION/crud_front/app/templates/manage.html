@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block content %}
+        <div class="header-controls">
+            <h1>Data Records</h1>
+            <button class="add-btn" onclick="handleAddItem()">Add New Item</button>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="data-table-body">
+            </tbody>
+        </table>
+{% endblock %}

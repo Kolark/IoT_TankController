@@ -1,0 +1,106 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<style>
+body { font-family: Arial; max-width: 600px; margin: 20px auto; }
+input, select { margin: 5px; }
+.attribute-box { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+</style>
+
+<h2>Fiware Orion Entity Creator</h2>
+
+<label>Entity ID:</label><br>
+<input type="text" id="entityId" placeholder="e.g. Room01"><br><br>
+
+<label>Entity Type:</label><br>
+<input type="text" id="entityType" placeholder="e.g. Room"><br><br>
+
+<button onclick="addAttribute()">➕ Add Attribute</button>
+
+<div id="attributes"></div>
+
+<hr>
+
+<button onclick="generateEntity()">✅ Generate Entity JSON</button>
+
+<pre id="result"></pre>
+
+
+<script>
+let count = 0;
+
+function addAttribute() {
+  count++;
+  
+  const div = document.createElement("div");
+  div.className = "attribute-box";
+  div.id = "attr_" + count;
+
+  div.innerHTML = `
+    <label>Attribute Name:</label>
+    <input type="text" id="attrName_${count}" placeholder="e.g. temperature">
+
+    <label>Value:</label>
+    <input type="text" id="attrValue_${count}" placeholder="e.g. 25.4">
+
+    <label>Type:</label>
+    <select id="attrType_${count}">
+      <option value="Number">Number</option>
+      <option value="Text">Text</option>
+      <option value="Boolean">Boolean</option>
+      <option value="DateTime">DateTime</option>
+    </select>
+
+    <br><label>Metadata (optional):</label>
+    <input type="text" id="attrMetadata_${count}" placeholder="key=value,key=value">
+
+    <button onclick="removeAttribute(${count})">❌ Remove</button>
+  `;
+
+  document.getElementById("attributes").appendChild(div);
+}
+
+function removeAttribute(id){
+  const div = document.getElementById("attr_" + id);
+  div.remove();
+}
+
+function generateEntity() {
+  const entity = {
+    id: document.getElementById("entityId").value,
+    type: document.getElementById("entityType").value
+  };
+
+  // Loop attributes
+  document.querySelectorAll(".attribute-box").forEach(box => {
+    const id = box.id.split("_")[1];
+    const name = document.getElementById("attrName_" + id).value;
+    const value = document.getElementById("attrValue_" + id).value;
+    const type = document.getElementById("attrType_" + id).value;
+    const metadataInput = document.getElementById("attrMetadata_" + id).value;
+
+    if (!name) return;
+
+    const attribute = {
+      type: type,
+      value: value
+    };
+
+    // Metadata parsing: "key=value,key=value"
+    if (metadataInput.trim() !== "") {
+      const metadataObj = {};
+      metadataInput.split(",").forEach(pair => {
+        const [k, v] = pair.split("=");
+        if (k && v) metadataObj[k.trim()] = { value: v.trim() };
+      });
+      attribute.metadata = metadataObj;
+    }
+
+    entity[name] = attribute;
+  });
+
+  document.getElementById("result").textContent = JSON.stringify(entity, null, 2);
+}
+</script>
+{% endblock %}
+
