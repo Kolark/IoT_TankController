@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Control UI</title>
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #111;
+    font-family: Arial;
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    grid-gap: 10px;
+  }
+  button {
+    padding: 15px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .btn-stop { background: red; color: white; }
+  .btn-forward { background: limegreen; }
+  .btn-back { background: orange; }
+  .btn-rl { background: dodgerblue; }
+  .btn-rr { background: purple; color: white; }
+
+  /* Arrow layout grid placement */
+  .btn-forward { grid-column: 2; grid-row: 1; }
+  .btn-rl { grid-column: 1; grid-row: 2; }
+  .btn-stop { grid-column: 2; grid-row: 2; }
+  .btn-rr { grid-column: 3; grid-row: 2; }
+  .btn-back { grid-column: 2; grid-row: 3; }
+</style>
+</head>
+<body>
+
+<div class="controls">
+  <button class="btn-forward" onclick="sendCmd('FORWARD')">FORWARD</button>
+  <button class="btn-rl" onclick="sendCmd('RL')">RL</button>
+  <button class="btn-stop" onclick="sendCmd('STOP')">STOP</button>
+  <button class="btn-rr" onclick="sendCmd('RR')">RR</button>
+  <button class="btn-back" onclick="sendCmd('BACKWARD')">BACKWARD</button>
+</div>
+
+<script>
+  function sendCmd(cmd) {
+    fetch("/notify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: cmd })
+    })
+    .then(() => console.log("Sent:", cmd))
+    .catch(error => console.error("Error:", error));
+  }
+
+  // ✅ Keyboard support
+  document.addEventListener("keydown", (e) => {
+    switch (e.key) {
+      case "ArrowUp": sendCmd("FORWARD"); break;
+      case "ArrowDown": sendCmd("BACKWARD"); break;
+      case "ArrowLeft": sendCmd("RL"); break;
+      case "ArrowRight": sendCmd("RR"); break;
+      case " ": sendCmd("STOP"); break; // Spacebar
+    }
+  });
+</script>
+
+</body>
+</html>
