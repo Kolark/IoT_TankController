@@ -14,13 +14,15 @@ void onMessageReceived(String msg){
 
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, msg);
-    Serial.println(msg);
+    
     if (!error) {
         String msgType = doc["type"];
-        JsonObject dataObject = doc["data"].as<JsonObject>(); 
-        String outputString;
-        serializeJson(dataObject, outputString);
-        LORATX::sendLoraPacket(outputString.c_str());
+        String dataObject = doc["data"]; 
+        // String outputString;
+        // serializeJson(dataObject, outputString);
+
+        Serial.printf("[WS] <<< %s\n", dataObject.c_str());
+        LORATX::sendLoraPacket(dataObject.c_str());
     }
 }
 
