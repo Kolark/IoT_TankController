@@ -48,7 +48,9 @@ def run_websocket_server():
 
 @app.route('/notify', methods=['POST'])
 def notify():
-    message = request.json.get('message', 'Notification from endpoint')
+
+    json_data = request.json
+    message = json_data.get('message', json.dumps(json_data))
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

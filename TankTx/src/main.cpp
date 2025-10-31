@@ -14,7 +14,7 @@ void onMessageReceived(String msg){
 
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, msg);
-        
+    Serial.println(msg);
     if (!error) {
         String msgType = doc["type"];
         JsonObject dataObject = doc["data"].as<JsonObject>(); 
@@ -50,12 +50,5 @@ void loop()
     }
 
     WSM.ws_client.poll();
-
-    static unsigned long lastSend = 0;
-    if (WSM.ws_connected && millis() - lastSend > 10000) {
-        WSM.sendMessage("Hello from LilyGO");
-        lastSend = millis();
-    }
-
     delay(5);
 }
