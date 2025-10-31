@@ -20,7 +20,7 @@
 
 namespace LORATX {
     void setupLora();
-    void sendLoraPacket(char* msg);
+    void sendLoraPacket(const char* msg);
 }
 
 #endif

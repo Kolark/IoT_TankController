@@ -37,26 +37,11 @@ void LORATX::setupLora(){
 }
 
 
-void LORATX::sendLoraPacket(char* msg){
+void LORATX::sendLoraPacket(const char* msg){
     Serial.println("Sending packet: ");
     Serial.println(msg);
     LoRa.beginPacket();
     LoRa.print(msg);
-    // if(v == 0){
-    //     LoRa.print( "{\"COMMAND\": 0, \"pwma\": 200}");
-    // }
-    // else if(v == 1){
-    //     LoRa.print( "{\"COMMAND\": 1, \"pwma\": 200}");
-    // }
-    // else if(v == 2){
-    //     LoRa.print( "{\"COMMAND\": 2, \"pwma\": 200}");
-    // }
-    // else if(v == 3){
-    //     LoRa.print( "{\"COMMAND\": 3, \"pwma\": 200}");
-    // }
-    // else if(v == 4){
-    //     LoRa.print( "{\"COMMAND\": 4, \"pwma\": 200}");
-    // }
     LoRa.endPacket();
     delay(500);
 }

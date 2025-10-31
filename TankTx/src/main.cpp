@@ -3,14 +3,25 @@
 #include "LoraTXSetup.h"
 #include "WifiSetup.h"
 #include "ws.h"
-
+#include <ArduinoJson.h>
 const char* ssid = "UPBWiFi";
 const char* password = "";
-const char* websockets_server_host = "ec2-35-175-231-121.compute-1.amazonaws.com";
+const char* websockets_server_host = "ec2-34-239-143-41.compute-1.amazonaws.com";
 const uint16_t websockets_server_port = 5001;
 
 void onMessageReceived(String msg){
     Serial.println(msg);
+
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, msg);
+        
+    if (!error) {
+        String msgType = doc["type"];
+        JsonObject dataObject = doc["data"].as<JsonObject>(); 
+        String outputString;
+        serializeJson(dataObject, outputString);
+        LORATX::sendLoraPacket(outputString.c_str());
+    }
 }
 
 void setup()
@@ -21,7 +32,7 @@ void setup()
 
     delay(100);
 
-    // LORATX::setupLora();
+    LORATX::setupLora();
 }
 
 void loop()

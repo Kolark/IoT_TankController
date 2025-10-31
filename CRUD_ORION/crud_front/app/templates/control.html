@@ -54,7 +54,7 @@
     fetch("/notify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: cmd })
+      body: JSON.stringify({ COMMAND: cmd, pwma: 200 })
     })
     .then(() => console.log("Sent:", cmd))
     .catch(error => console.error("Error:", error));
