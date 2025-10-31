@@ -77,7 +77,7 @@ def manage():
 
 @app.route('/control')
 @login_required
-def manage():
+def control():
     return render_template("control.html")
 
 @app.route('/add')

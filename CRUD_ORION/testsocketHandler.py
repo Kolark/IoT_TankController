@@ -1,33 +1,72 @@
-from flask import Flask, request
-from flask_socketio import SocketIO, emit
+from flask import Flask, render_template, jsonify, redirect, url_for, session, request
+from functools import wraps
+import asyncio
+import websockets
+import json
+import threading
 import sys
+from flask_cors import CORS
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', transports=['websocket'])
-
+CORS(app)
 connected_clients = set()
 
-@socketio.on('connect')
-def handle_connect():
-    connected_clients.add(request.sid)
-    print(f"Client connected: {request.sid}", flush=True)
+async def handle_client(websocket, path):
+    connected_clients.add(websocket)
+    print(f"Client connected: {id(websocket)}", flush=True)
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    connected_clients.discard(request.sid)
-    print(f"Client disconnected: {request.sid}", flush=True)
+    try:
+        async for message in websocket:
+            print(f"Received: {message}", flush=True)
 
-@socketio.on('message')
-def handle_message(data):
-    print(f"Received: {data}", flush=True)
-    emit('response', f"Server received: {data}")
+            try:
+                data = json.loads(message)
+                if isinstance(data, dict) and 'type' in data:
+                    if data['type'] == 'message':
+                        response = json.dumps({'type': 'response', 'data': f"Server received: {data.get('data', '')}"})
+                        await websocket.send(response)
+            except:
+                pass
+
+    except websockets.exceptions.ConnectionClosed:
+        pass
+    finally:
+        connected_clients.discard(websocket)
+        print(f"Client disconnected: {id(websocket)}", flush=True)
+
+async def broadcast_notification(message):
+    if connected_clients:
+        notification = json.dumps({'type': 'notification', 'data': message})
+        await asyncio.gather(*[client.send(notification) for client in connected_clients], return_exceptions=True)
+
+def run_websocket_server():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    start_server = websockets.serve(handle_client, '0.0.0.0', 5001)
+    loop.run_until_complete(start_server)
+    loop.run_forever()
 
 @app.route('/notify', methods=['POST'])
 def notify():
     message = request.json.get('message', 'Notification from endpoint')
-    for client_id in connected_clients:
-        socketio.emit('notification', message, to=client_id)
-    return {'status': 'sent', 'clients': len(connected_clients)}
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(broadcast_notification(message))
+    loop.close()
+
+    return jsonify({'status': 'sent', 'clients': len(connected_clients)})
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        print("checking login...")
+        return f(*args, **kwargs)
+    return decorated_function
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+    ws_thread = threading.Thread(target=run_websocket_server, daemon=True)
+    ws_thread.start()
+
+    app.run(host='0.0.0.0', port=5000)
